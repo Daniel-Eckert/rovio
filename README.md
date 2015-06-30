@@ -1,7 +1,7 @@
 # README #
 
 
-### Get all git repositories & submodules s###
+### Get all git repositories & submodules ###
 ```
 #!command
 
