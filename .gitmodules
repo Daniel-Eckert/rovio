@@ -1,3 +1,6 @@
 [submodule "thirdparty/lightweight_filtering"]
 	path = thirdparty/lightweight_filtering
 	url = git@bitbucket.org:bloesch/lightweight_filtering.git
+[submodule "thirdparty/kindr"]
+	path = thirdparty/kindr
+	url = git@github.com:ethz-asl/kindr.git
