@@ -1,0 +1,13 @@
+# p22014
+image_width: 752
+image_height: 480
+camera_name: cam0
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [458.84998030081385, 0.0, 372.65337406988664, 0.0, 457.4591626342935, 247.81121631129776, 0.0, 0.0, 1.0]
+distortion_model: equidistant
+distortion_coefficients:
+  rows: 1
+  cols: 4
+  data:  [0.006956814312091567, -0.007091312398440743, 0.0017716100921620398, 0.005714248956414777]
