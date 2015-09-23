@@ -32,6 +32,7 @@
 #include <queue>
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Image.h>
@@ -63,6 +64,7 @@ class RovioNode{
   ros::Subscriber subImg1_;
   ros::Subscriber subGroundtruth_;
   ros::Publisher pubPose_;
+  ros::Publisher pubPoseImu_;
   ros::Publisher pubRovioOutput_;
   ros::Publisher pubOdometry_;
   ros::Publisher pubTransform_;
@@ -80,6 +82,7 @@ class RovioNode{
   mtImgMeas imgUpdateMeas_;
   bool isInitialized_;
   geometry_msgs::PoseStamped poseMsg_;
+  geometry_msgs::PoseWithCovarianceStamped poseImuMsg_;
   geometry_msgs::TransformStamped transformMsg_;
   nav_msgs::Odometry odometryMsg_;
   RovioOutput rovioOutputMsg_;
@@ -118,6 +121,7 @@ class RovioNode{
     subImg1_ = nh_.subscribe("cam1/image_raw", 1000, &RovioNode::imgCallback1,this);
     subGroundtruth_ = nh_.subscribe("vrpn_client/pose", 1000, &RovioNode::groundtruthCallback,this);
     pubPose_ = nh_.advertise<geometry_msgs::PoseStamped>("rovio/pose", 1);
+    pubPoseImu_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("rovio/pose_imu", 1);
     pubTransform_ = nh_.advertise<geometry_msgs::TransformStamped>("rovio/transform", 1);
     pubRovioOutput_ = nh_.advertise<RovioOutput>("rovio/output", 1);
     pubOdometry_ = nh_.advertise<nav_msgs::Odometry>("rovio/odometry", 1);
@@ -132,6 +136,7 @@ class RovioNode{
     nh_private_.param("imu_frame", imu_frame_, imu_frame_);
 
     poseMsg_.header.frame_id = world_frame_;
+    poseImuMsg_.header.frame_id = world_frame_;
     rovioOutputMsg_.header.frame_id = world_frame_;
     rovioOutputMsg_.points.header.frame_id = camera_frame_;
     odometryMsg_.header.frame_id = world_frame_;
@@ -465,6 +470,35 @@ class RovioNode{
         rovioOutputMsg_.ypr_extrinsics_sigma.x = yprOutputCov_(0,0);
         rovioOutputMsg_.ypr_extrinsics_sigma.y = yprOutputCov_(1,1);
         rovioOutputMsg_.ypr_extrinsics_sigma.z = yprOutputCov_(2,2);
+
+        // Send IMU pose with covariance message
+        poseImuMsg_.header = poseMsg_.header;
+        poseImuMsg_.pose.pose.position.x = WrWM(0);
+        poseImuMsg_.pose.pose.position.y = WrWM(1);
+        poseImuMsg_.pose.pose.position.z = WrWM(2);
+        poseImuMsg_.pose.pose.orientation.w = qMW.w();
+        poseImuMsg_.pose.pose.orientation.x = qMW.x();
+        poseImuMsg_.pose.pose.orientation.y = qMW.y();
+        poseImuMsg_.pose.pose.orientation.z = qMW.z();
+        // TODO: Add uncertainty from Camera to IMU
+        Eigen::Matrix<double, 6, 6> imuCov;
+        for(unsigned int i = 0; i < 6; i++)
+          for(unsigned int j = 0; j < 6; j++)
+            imuCov(i, j) = odometryMsg_.pose.covariance[j+6*i];
+        Eigen::Quaterniond qCM(state.qCM(0).w(), state.qCM(0).x(), state.qCM(0).y(), state.qCM(0).z());
+        Eigen::Matrix<double, 6, 6> R = Eigen::Matrix<double, 6, 6>::Zero();
+        Eigen::Matrix3d R_small = qCM.conjugate().toRotationMatrix();
+        for(unsigned int i = 0; i < 3; i++)
+          for(unsigned int j = 0; j < 3; j++)
+            R(i,j) = R_small(i, j);
+        for(unsigned int i = 3; i < 6; i++)
+          for(unsigned int j = 3; j < 6; j++)
+            R(i,j) = R_small(i-3, j-3);
+        imuCov = R*imuCov*R.transpose();
+        for(unsigned int i=0;i<6;i++)
+          for(unsigned int j=0;j<6;j++)
+            poseImuMsg_.pose.covariance[j+6*i] = imuCov(i, j);
+        pubPoseImu_.publish(poseImuMsg_);
 
         //Point cloud
         rovioOutputMsg_.points.header.seq = poseMsgSeq_;
