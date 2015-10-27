@@ -106,7 +106,7 @@ Update0
     minTrackedAndFreeFeatures 0.5
     minRelativeSTScore 0.75
     minAbsoluteSTScore 5.0
-    fastDetectionThreshold 10
+    fastDetectionThreshold 20
     matchingPixelThreshold 0.0
     specialLinearizationThreshold 0.0025 ; (set to 0 for always, and to large value for never, 1 pixel ~ 0.0025)
     patchRejectionTh 10.0;
